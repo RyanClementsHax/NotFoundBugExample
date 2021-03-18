@@ -14,7 +14,17 @@ namespace NotFoundBugExample
             Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    webBuilder.UseStartup<Startup>();
+                    webBuilder
+                        .ConfigureKestrel(serverOptions =>
+                        {
+
+                            serverOptions.ListenLocalhost(5003, listenOptions =>
+                            {
+                                listenOptions.UseHttps();
+                                listenOptions.UseConnectionLogging();
+                            });
+                        })
+                        .UseStartup<Startup>();
                 });
     }
 }

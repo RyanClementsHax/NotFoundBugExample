@@ -33,6 +33,24 @@ namespace NotFoundBugExample
                 var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
                 c.IncludeXmlComments(xmlPath);
+            })
+            .Configure<ExceptionHandlerOptions>(options =>
+            {
+                options.AllowStatusCode404Response = true;
+                options.ExceptionHandler = async context =>
+                {
+                    var errorFeature = context.Features.Get<IExceptionHandlerFeature>();
+                    var ex = errorFeature.Error;
+
+                    context.Response.StatusCode = ex switch
+                    {
+                        DomainException domainEx => StatusCodes.Status400BadRequest,
+                        NotFoundException notFoundEx => StatusCodes.Status404NotFound, // if you change this status code to anything else, it will be fine
+                        _ => StatusCodes.Status500InternalServerError,
+                    };
+
+                    await context.Response.WriteAsync("There was an error caught in the exception handler lambda");
+                };
             });
         }
 
@@ -52,22 +70,7 @@ namespace NotFoundBugExample
 
             app.UseAuthorization();
 
-            // This exception handler only works in IIS Express
-            app.UseExceptionHandler(builder =>
-                builder.Run(async context =>
-                {
-                    var errorFeature = context.Features.Get<IExceptionHandlerFeature>();
-                    var ex = errorFeature.Error;
-
-                    context.Response.StatusCode = ex switch
-                    {
-                        DomainException domainEx => StatusCodes.Status400BadRequest,
-                        NotFoundException notFoundEx => StatusCodes.Status404NotFound, // if you change this status code to anything else, it will be fine
-                        _ => StatusCodes.Status500InternalServerError,
-                    };
-
-                    await context.Response.WriteAsync("There was an error caught in the exception handler lambda");
-                }));
+            app.UseExceptionHandler();
 
             // This exception handler works in all cases
             //app.Use(async (context, next) =>
